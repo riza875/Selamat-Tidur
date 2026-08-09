@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Pesan Selamat Tidur</title>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    --navy-deep:#060a1a; --navy:#0e1630; --periwinkle:#93a9ff;
+    --moon-cream:#ffe9c4; --blush:#ff8fab; --lavender-text:#dbdff2;
+    --glass:rgba(255,255,255,0.06); --glass-border:rgba(255,255,255,0.14);
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; min-height:100vh;
+    font-family:'Quicksand', sans-serif;
+    background: linear-gradient(180deg, #060a1a 0%, #0b1130 50%, #060a1a 100%);
+    color: var(--lavender-text);
+    padding: 20px 14px 60px;
+  }
+  h1.title{
+    text-align:center;
+    font-size:22px;
+    color:#fff;
+    margin-bottom:4px;
+  }
+  .subtitle{
+    text-align:center;
+    font-size:13px;
+    color: var(--periwinkle);
+    margin-bottom:22px;
+  }
+
+  /* login gate */
+  .login-box{
+    max-width:340px;
+    margin: 80px auto;
+    background: var(--glass);
+    border:1px solid var(--glass-border);
+    border-radius:20px;
+    padding:28px 22px;
+    text-align:center;
+  }
+  .login-box input{
+    width:100%;
+    padding:12px 14px;
+    border-radius:12px;
+    border:1px solid var(--glass-border);
+    background: rgba(255,255,255,0.06);
+    color:#fff;
+    font-size:15px;
+    margin:14px 0;
+    outline:none;
+  }
+  .login-box button{
+    width:100%;
+    padding:12px;
+    border-radius:12px;
+    border:none;
+    background: linear-gradient(135deg, var(--periwinkle), #6f86e0);
+    color:#fff;
+    font-weight:700;
+    font-size:15px;
+    cursor:pointer;
+  }
+  .login-error{
+    color: var(--blush);
+    font-size:13px;
+    margin-top:10px;
+    min-height:16px;
+  }
+
+  #panel{ display:none; max-width:520px; margin:0 auto; }
+
+  .empty-state{
+    text-align:center;
+    padding:60px 20px;
+    color: rgba(219,223,242,0.5);
+    font-size:14px;
+  }
+
+  .pesan-card{
+    background: var(--glass);
+    border:1px solid var(--glass-border);
+    border-radius:18px;
+    padding:16px 18px;
+    margin-bottom:14px;
+  }
+  .pesan-meta{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:8px;
+  }
+  .pesan-waktu{
+    font-size:11px;
+    color: var(--periwinkle);
+  }
+  .badge-baru{
+    font-size:10px;
+    background: var(--blush);
+    color:#fff;
+    padding:2px 8px;
+    border-radius:999px;
+    font-weight:700;
+  }
+  .pesan-isi{
+    font-size:15px;
+    color:#fff;
+    background: rgba(255,255,255,0.05);
+    padding:10px 14px;
+    border-radius:12px 12px 12px 4px;
+    margin-bottom:10px;
+  }
+  .balasan-terkirim{
+    font-size:14px;
+    color: var(--moon-cream);
+    background: rgba(255,233,196,0.10);
+    border:1px solid rgba(255,233,196,0.25);
+    padding:10px 14px;
+    border-radius:12px 12px 4px 12px;
+    margin-top:8px;
+  }
+  .balas-form{
+    display:flex;
+    gap:8px;
+    margin-top:6px;
+  }
+  .balas-form input{
+    flex:1;
+    padding:10px 12px;
+    border-radius:12px;
+    border:1px solid var(--glass-border);
+    background: rgba(255,255,255,0.06);
+    color:#fff;
+    font-size:14px;
+    outline:none;
+  }
+  .balas-form button{
+    padding:10px 16px;
+    border-radius:12px;
+    border:none;
+    background: linear-gradient(135deg, var(--blush), #ff6f91);
+    color:#fff;
+    font-weight:700;
+    font-size:13px;
+    cursor:pointer;
+  }
+  .balas-form button:active{ transform:scale(0.96); }
+
+  .refresh-note{
+    text-align:center;
+    font-size:11px;
+    color: rgba(219,223,242,0.4);
+    margin-top:20px;
+  }
+</style>
+</head>
+<body>
+
+  <div class="login-box" id="loginBox">
+    <h1 class="title">🔐 Admin</h1>
+    <p class="subtitle">Panel balas pesan — Selamat Tidur</p>
+    <input type="password" id="passInput" placeholder="Masukkan password admin" autocapitalize="off" autocomplete="off" spellcheck="false">
+    <button onclick="cekPassword()">Masuk</button>
+    <div style="margin-top:10px;">
+      <label style="font-size:12px; color:var(--periwinkle); cursor:pointer;">
+        <input type="checkbox" id="showPass" onclick="document.getElementById('passInput').type = this.checked ? 'text' : 'password'">
+        Tampilkan password
+      </label>
+    </div>
+    <div class="login-error" id="loginError"></div>
+  </div>
+
+  <div id="panel">
+    <h1 class="title">💌 Pesan Masuk</h1>
+    <div class="subtitle">Balasanmu akan langsung muncul di halaman dia</div>
+    <div id="daftarPesan"></div>
+    <div class="refresh-note">Update otomatis secara realtime</div>
+  </div>
+
+  <script>
+    /* ============================================================
+       Pakai config Firebase project yang SAMA persis dengan file
+       selamat-tidur.html (project minigupyy) supaya datanya nyambung.
+       ============================================================ */
+    let db = null;
+    let koleksi = null;
+    try {
+      const firebaseConfig = {
+        apiKey: "ISI_DENGAN_API_KEY",
+        authDomain: "minigupyy.firebaseapp.com",
+        projectId: "minigupyy",
+        storageBucket: "minigupyy.appspot.com",
+        messagingSenderId: "ISI_DENGAN_SENDER_ID",
+        appId: "ISI_DENGAN_APP_ID"
+      };
+      firebase.initializeApp(firebaseConfig);
+      db = firebase.firestore();
+      koleksi = db.collection("pesan_selamat_tidur");
+    } catch(e) {
+      console.error('Firebase gagal dimuat:', e);
+    }
+
+    // Ganti password ini sesuai keinginanmu
+    const ADMIN_PASSWORD = "sayang123";
+
+    function cekPassword(){
+      const input = document.getElementById('passInput').value.trim();
+      if(input === ADMIN_PASSWORD){
+        document.getElementById('loginBox').style.display = 'none';
+        document.getElementById('panel').style.display = 'block';
+        sessionStorage.setItem('admin_ok', '1');
+        muatPesan();
+      } else {
+        document.getElementById('loginError').textContent = 'Password salah, coba lagi.';
+      }
+    }
+    document.getElementById('passInput').addEventListener('keydown', e => {
+      if(e.key === 'Enter') cekPassword();
+    });
+
+    // auto-login kalau sudah pernah login di sesi ini
+    if(sessionStorage.getItem('admin_ok') === '1'){
+      document.getElementById('loginBox').style.display = 'none';
+      document.getElementById('panel').style.display = 'block';
+      muatPesan();
+    }
+
+    function formatWaktu(ts){
+      if(!ts) return '...';
+      const d = ts.toDate ? ts.toDate() : new Date(ts);
+      return d.toLocaleDateString('id-ID', {day:'numeric', month:'short'}) + ' · ' +
+             String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+    }
+
+    function muatPesan(){
+      if(!koleksi){
+        document.getElementById('daftarPesan').innerHTML =
+          '<div class="empty-state">Firebase belum terhubung. Cek config di kode.</div>';
+        return;
+      }
+      koleksi.orderBy('waktu', 'desc').onSnapshot(snapshot => {
+        const wrap = document.getElementById('daftarPesan');
+        if(snapshot.empty){
+          wrap.innerHTML = '<div class="empty-state">Belum ada pesan masuk 💤</div>';
+          return;
+        }
+        wrap.innerHTML = '';
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const card = document.createElement('div');
+          card.className = 'pesan-card';
+
+          const sudahDibalas = !!data.balasan;
+          card.innerHTML = `
+            <div class="pesan-meta">
+              <span class="pesan-waktu">${formatWaktu(data.waktu)}</span>
+              ${sudahDibalas ? '' : '<span class="badge-baru">BELUM DIBALAS</span>'}
+            </div>
+            <div class="pesan-isi">${(data.teks||'').replace(/</g,'&lt;')}</div>
+            ${sudahDibalas ? `<div class="balasan-terkirim">↩️ ${data.balasan.replace(/</g,'&lt;')}</div>` : `
+              <div class="balas-form">
+                <input type="text" placeholder="Tulis balasanmu..." id="input-${doc.id}">
+                <button onclick="kirimBalasan('${doc.id}')">Kirim</button>
+              </div>
+            `}
+          `;
+          wrap.appendChild(card);
+        });
+      }, err => {
+        document.getElementById('daftarPesan').innerHTML =
+          '<div class="empty-state">Gagal memuat pesan. Cek koneksi / config Firebase.</div>';
+        console.error(err);
+      });
+    }
+
+    function kirimBalasan(docId){
+      const input = document.getElementById('input-' + docId);
+      const teks = input.value.trim();
+      if(!teks) return;
+      koleksi.doc(docId).update({
+        balasan: teks,
+        waktuBalasan: firebase.firestore.FieldValue.serverTimestamp()
+      }).catch(err => alert('Gagal mengirim balasan: ' + err.message));
+    }
+  </script>
+
+</body>
+</html>
